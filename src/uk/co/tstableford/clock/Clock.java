@@ -12,6 +12,7 @@ import gnu.io.UnsupportedCommOperationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -25,7 +26,12 @@ public class Clock {
 	private SerialWriter writer;
 	public static void main(String[] args) throws IOException, PortInUseException, 
 	NoSuchPortException, UnsupportedCommOperationException, 
-	TooManyListenersException, InterruptedException {
+	TooManyListenersException, InterruptedException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
+		System.out.println(System.getProperty("user.dir")+System.getProperty("file.separator")+"lib");
+		System.setProperty("java.library.path", System.getProperty("user.dir")+System.getProperty("file.separator")+"lib");
+		Field fieldSysPath = ClassLoader.class.getDeclaredField( "sys_paths" );
+		fieldSysPath.setAccessible( true );
+		fieldSysPath.set( null, null );
 		new Clock(args[0]);
 	}
 	public Clock(String portName) throws IOException, PortInUseException, NoSuchPortException, UnsupportedCommOperationException, TooManyListenersException, InterruptedException{
@@ -123,18 +129,23 @@ public class Clock {
 				write(data[i]);
 			}
 		}
-		public synchronized void write(byte data){
+		private synchronized void write(byte data){
 			buffer.add(data);
 		}
 		@Override
 		public void run() {
 			while(true){
-				if(buffer.size()>0){
+				while(buffer.size()>0){
 					try {
 						out.write(buffer.remove(0));
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
+				}
+				try {
+					Thread.sleep(50);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
 		}
